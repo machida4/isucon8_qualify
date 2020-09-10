@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"sort"
@@ -310,6 +311,22 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 var db *sql.DB
 
 func main() {
+	// pprof
+	m := http.NewServeMux()
+	m.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	m.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	m.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	m.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	m.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+
+	s := &http.Server{
+		Addr:    "127.0.0.1:6060",
+		Handler: m,
+	}
+	go func() {
+		s.ListenAndServe()
+	}()
+	
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
 		os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
 		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"),
